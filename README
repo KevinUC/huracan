@@ -1,0 +1,7 @@
+memset: https://stackoverflow.com/questions/3389464/initializing-a-structure-array-using-memset
+
+open(): http://codewiki.wikidot.com/c:system-calls:open
+
+strcat(): https://stackoverflow.com/questions/308695/how-do-i-concatenate-const-literal-strings-in-c
+
+execvp(): https://stackoverflow.com/questions/20063803/handling-errors-from-execvp

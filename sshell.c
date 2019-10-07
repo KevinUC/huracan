@@ -4,39 +4,44 @@
 #include <unistd.h>
 #include <string.h>
 
-#define MAXCML 512
+#include "Task.h"
+#include "Helpers.h"
 
 int main(int argc, char *argv[])
 {
-
-    int retval;
-    const char *shellPrompt = "sshell$ ";
+    Task tasks[MAX_NUM_TASKS]; /* storing task objects */
 
     while (1)
     {
-        char cmd[MAXCML];
+        int taskCnt = 0;
+        bool bg = false;
+        char command[MAX_CML_LENGTH]; /* user command */
 
-        fputs(shellPrompt, stdout);
+        memset(tasks, 0, sizeof(tasks));
+        memset(command, 0, sizeof(command));
 
-        fgets(cmd, sizeof cmd, stdin);
+        displayPrompt();
 
-        cmd[strlen(cmd) - 1] = '\0';
+        parseStatus_t status = readAndParseTasks(tasks, command, &taskCnt, &bg);
 
-        char **argvs = (char *[]){cmd, NULL};
-
-        pid_t pid = fork();
-
-        if (pid == 0)
-        { /* enter child proecess */
-            execvp(cmd, argvs);
+        if (status == PARSE_SUCCESS)
+        {
+            //printTasks(tasks, taskCnt);
+            executeCommands(tasks, command, taskCnt, bg);
         }
         else
-        { /* enter parent proecess */
-            wait(&retval);
-            //char *cmdFull = "/bin/date -u";
-            //fprintf(stderr, "Return status value for '%s': %d\n", cmdFull, WEXITSTATUS(retval));
+        {
+            printErrorMessage(status);
+        }
+
+        for (int i = 0; i < taskCnt; i++)
+        {
+            for (int j = 0; j < tasks[i]._argCnt; j++)
+            {
+                free(tasks[i]._args[j]);
+            }
+            free(tasks[i]._args);
         }
     }
-
     return EXIT_SUCCESS;
 }
