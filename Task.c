@@ -6,7 +6,16 @@ parseStatus_t readAndParseTasks(Task *tasks, char *command, int *count, bool *bg
     char input[MAX_CML_LENGTH];
     memset(input, 0, sizeof(input));
 
-    fgets(input, sizeof input, stdin);
+    fgets(input, sizeof(input), stdin);
+    /*
+     * Echoes command line to stdout if fgets read from a file and not
+     * the terminal (which is the case with the test script)
+     */
+    if (!isatty(STDIN_FILENO))
+    {
+        printf("%s", input);
+        fflush(stdout);
+    }
     input[strlen(input) - 1] = '\0'; /* remove \n */
     strncpy(command, input, strlen(input));
 
@@ -261,6 +270,9 @@ void printErrorMessage(parseStatus_t status)
         break;
     case EXECUTE_ERROR_NO_SUCH_COMMAND:
         fprintf(stderr, "Error: command not found\n");
+        break;
+    case EXECUTE_ERROR_EXIT_WITH_BG:
+        fprintf(stderr, "Error: active jobs still running\n");
         break;
     default:
         break;
