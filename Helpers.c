@@ -8,7 +8,7 @@ void displayPrompt()
     fputs(shellPrompt, stdout);
 }
 
-void executeCommands(Task *tasks, char *command, int taskCnt, bool bg)
+void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgList)
 {
     pid_t pidNum;
     pid_t taskToPid[MAX_CML_LENGTH];
@@ -69,22 +69,64 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg)
 
     dup2(stdinFdCpy, STDIN_FILENO); /* recover stdin from the copy */
 
+    /* handle background command */
+    if (bg)
+    {
+        Node *node = malloc(sizeof(Node));
+        memset(node, 0, sizeof(Node));
+        /* init node */
+        node->_next = NULL;
+        node->_taskCnt = taskCnt;
+        strncpy(node->_command, command, strlen(command));
+        memcpy(node->_taskToPid, taskToPid, sizeof(pid_t) * taskCnt);
+
+        /* add node to list */
+        addNode(bgList, node);
+        return;
+    }
+
+    //printf("waiting for process ... \n");
+
     /* wait for processes to finish */
     for (int i = 0; i < taskCnt; i++)
     {
         int status;
-        int completedPidNum = wait(&status);
+        int completedPidNum = waitpid(taskToPid[i], &status, 0);
         int taskNum = findTaskNum(taskToPid, completedPidNum, taskCnt);
 
         taskToExitStatus[taskNum] = WEXITSTATUS(status);
     }
 
-    if (hasExit) /* kill the parent process */
+    if (hasExit) /* attempt to kill the parent process */
     {
-        exit(0);
+        /* active jobs running */
+        if (bgList->_size > 0)
+        {
+            /* manually print err message */
+            printErrorMessage(EXECUTE_ERROR_EXIT_WITH_BG);
+            fprintf(stderr, "+ completed 'exit' [1]\n");
+            return;
+        }
+        else
+        {
+            fprintf(stderr, "Bye...\n");
+            exit(0); /* exit parent process */
+        }
     }
 
+    /* check if bg task have been completed and print out the exit status message */
+    if (bgList->_size > 0)
+    {
+        processList(bgList);
+    }
+
+    printCommandExitStatus(command, taskCnt, taskToExitStatus);
+}
+
+void printCommandExitStatus(char *command, int taskCnt, int *taskToExitStatus)
+{
     /* all tasks have completed, print message to sterr */
+
     fprintf(stderr, "+ completed \'%s\' ", command);
 
     for (int i = 0; i < taskCnt; i++)
@@ -110,19 +152,12 @@ void executeSingleCommand(Task task)
     }
 
     /* built in command */
-    if (strcmp(task._program, "exit") == 0)
-    {
-        myExit();
-    }
-    else if (strcmp(task._program, "cd") == 0)
-    {
-        myCd("");
-    }
-    else if (strcmp(task._program, "pwd") == 0)
+
+    if (strcmp(task._program, "pwd") == 0)
     {
         myPwd();
     }
-    else
+    else if (strcmp(task._program, "exit") != 0 && strcmp(task._program, "cd") != 0)
     {
         execvp(task._program, (char *const *)task._args);
         if (errno == ENOENT)

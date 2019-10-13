@@ -6,10 +6,17 @@
 
 #include "Task.h"
 #include "Helpers.h"
+#include "List.h"
 
 int main(int argc, char *argv[])
 {
     Task tasks[MAX_NUM_TASKS]; /* storing task objects */
+    List bgList;
+    /* initialize bgList */
+    memset(&bgList, 0, sizeof(List));
+    Node *head = malloc(sizeof(Node));
+    head->_next = NULL;
+    bgList._head = head;
 
     while (1)
     {
@@ -20,6 +27,12 @@ int main(int argc, char *argv[])
         memset(tasks, 0, sizeof(tasks));
         memset(command, 0, sizeof(command));
 
+        /* check if bg task have been completed and print out the exit status message */
+        if (bgList._size > 0)
+        {
+            processList(&bgList);
+        }
+
         displayPrompt();
 
         parseStatus_t status = readAndParseTasks(tasks, command, &taskCnt, &bg);
@@ -27,7 +40,7 @@ int main(int argc, char *argv[])
         if (status == PARSE_SUCCESS)
         {
             //printTasks(tasks, taskCnt);
-            executeCommands(tasks, command, taskCnt, bg);
+            executeCommands(tasks, command, taskCnt, bg, &bgList);
         }
         else
         {
@@ -43,5 +56,13 @@ int main(int argc, char *argv[])
             free(tasks[i]._args);
         }
     }
+
+    /* clean up Node */
+    if (bgList._head != NULL)
+    {
+        free(bgList._head);
+        bgList._head = NULL;
+    }
+
     return EXIT_SUCCESS;
 }

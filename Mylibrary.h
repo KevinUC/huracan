@@ -6,8 +6,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-void myExit();
-void myCd(char *dest);
 void myPwd();
 
 #endif

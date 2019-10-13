@@ -5,3 +5,6 @@ open(): http://codewiki.wikidot.com/c:system-calls:open
 strcat(): https://stackoverflow.com/questions/308695/how-do-i-concatenate-const-literal-strings-in-c
 
 execvp(): https://stackoverflow.com/questions/20063803/handling-errors-from-execvp
+
+waitpid(): https://linux.die.net/man/2/waitpid
+           https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.bpxbd00/rtwaip.htm
