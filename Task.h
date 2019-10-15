@@ -37,8 +37,8 @@ typedef struct
 {
     char _program[MAX_CML_LENGTH]; /* program to be executed, e.g. ls, cd */
     char **_args;                  /* arguments to the program */
-    bool _hasInRedirect;           /* mark if the task contains input redirect */
-    bool _hasOutRedirect;          /* mark if the task contains output redirect */
+    bool _hasInRedirect;
+    bool _hasOutRedirect;
     int _inFileFd;
     int _outFileFd;
     int _argCnt;
@@ -51,10 +51,5 @@ bool getFileName(char *input, char *fileName, int *i);
 bool isBgValid(char *input, int i);
 bool isOutRedirectValid(char *input, int i);
 void printErrorMessage(parseStatus_t status);
-
-/***********HELPER FUNCTIONS**********/
-
-void printTasks(Task *tasks, int cnt);
-void printTask(Task task);
 
 #endif

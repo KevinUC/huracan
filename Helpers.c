@@ -1,7 +1,5 @@
 #include "Helpers.h"
 
-/* display shell prompt to the user*/
-
 void displayPrompt()
 {
     const char *shellPrompt = "sshell$ ";
@@ -23,30 +21,43 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgL
 
     for (int i = 0; i < taskCnt; i++)
     {
-        /* The following code block was partially based on lecture slide 01.syscalls, page 36 */
+        /* The following code block was partially based on lecture slide
+           01.syscalls, page 36 
+         */
 
         if (i > 0)
-        { /* if there are previous commands */
+        {
+            /* if there are previous commands point STDIN_FILENO to the read
+               end of last opened pipe
+             */
             dup2(fd[i - 1][0], STDIN_FILENO);
-            close(fd[i - 1][0]); /* close read */
+            close(fd[i - 1][0]);
         }
 
         if (i < taskCnt - 1)
-        {                /* if not the last command  */
-            pipe(fd[i]); /* create pipe for the inter-coommunication between cur and next commands */
+        {
+            /* if current command is not the last command, create a new pipe
+               for the inter-communication between current and next commands
+               Then point STDOUT_FILENO to thw write end of this pipe
+             */
+            pipe(fd[i]);
             dup2(fd[i][1], STDOUT_FILENO);
-            close(fd[i][1]); /* close write */
+            close(fd[i][1]);
         }
 
         if (i == taskCnt - 1)
-        {                                     /* last command */
-            dup2(stdoutFdCpy, STDOUT_FILENO); /* recover stdout from the copy */
+        {
+            /* if this is the last command, recover STDOUT_FILENO from the
+               saved copy
+             */
+            dup2(stdoutFdCpy, STDOUT_FILENO);
         }
 
-        pidNum = fork(); /* fork() clones a new process */
+        pidNum = fork(); /* clones a child process */
 
         if (pidNum != 0)
-        { /* Parent */
+        {
+            /* parent process */
             taskToPid[i] = pidNum;
             if (strcmp(tasks[i]._program, "exit") == 0)
             {
@@ -62,19 +73,22 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgL
             }
         }
         else
-        { /* Child */
+        {
+            /* child process */
             executeSingleCommand(tasks[i]);
         }
     }
 
-    dup2(stdinFdCpy, STDIN_FILENO); /* recover stdin from the copy */
+    /* finally, recover STDIN_FILENO from the copy */
+    dup2(stdinFdCpy, STDIN_FILENO);
 
     /* handle background command */
     if (bg)
     {
         Node *node = malloc(sizeof(Node));
         memset(node, 0, sizeof(Node));
-        /* init node */
+
+        /* initialize node */
         node->_next = NULL;
         node->_taskCnt = taskCnt;
         strncpy(node->_command, command, strlen(command));
@@ -85,9 +99,7 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgL
         return;
     }
 
-    //printf("waiting for process ... \n");
-
-    /* wait for processes to finish */
+    /* wait for all active processes to complete */
     for (int i = 0; i < taskCnt; i++)
     {
         int status;
@@ -97,12 +109,13 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgL
         taskToExitStatus[taskNum] = WEXITSTATUS(status);
     }
 
-    if (hasExit) /* attempt to kill the parent process */
+    /* handle the case when command wants to exit*/
+    if (hasExit)
     {
-        /* active jobs running */
+        /* if active jobs running, print error */
         if (bgList->_size > 0)
         {
-            /* manually print err message */
+            /* manually print error message to STDERR_FILENO */
             printErrorMessage(EXECUTE_ERROR_EXIT_WITH_BG);
             fprintf(stderr, "+ completed 'exit' [1]\n");
             return;
@@ -114,7 +127,9 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgL
         }
     }
 
-    /* check if bg task have been completed and print out the exit status message */
+    /* check if bg task have been completed and print out the exit status
+       message 
+     */
     if (bgList->_size > 0)
     {
         processList(bgList);
@@ -151,7 +166,7 @@ void executeSingleCommand(Task task)
         close(task._outFileFd);
     }
 
-    /* built in command */
+    /* handle built in command */
 
     if (strcmp(task._program, "pwd") == 0)
     {
@@ -160,11 +175,13 @@ void executeSingleCommand(Task task)
     else if (strcmp(task._program, "exit") != 0 && strcmp(task._program, "cd") != 0)
     {
         execvp(task._program, (char *const *)task._args);
+
         if (errno == ENOENT)
         {
             printErrorMessage(EXECUTE_ERROR_NO_SUCH_COMMAND);
             exit(1);
         }
+
         exit(errno); /* if execvp fails, catch the error */
     }
 
@@ -180,6 +197,6 @@ int findTaskNum(pid_t *taskToPid, pid_t pidNum, int len)
             return i;
         }
     }
-    //printf("findTaskNum fails ... \n\n");
+
     return -1;
 }
