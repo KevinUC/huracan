@@ -138,15 +138,13 @@ expected values.
 # Sources that help us to complete the assignment:
 
 _memset_:
-https://stackoverflow.com/questions/3389464/
-initializing-a-structure-array-using-memset
+https://stackoverflow.com/q/3389464
 
 _open_:
 http://codewiki.wikidot.com/c:system-calls:open
 
 _strcat_:
-https://stackoverflow.com/questions/308695/
-how-do-i-concatenate-const-literal-strings-in-c
+https://stackoverflow.com/q/308695
 
 _execvp_:
 https://stackoverflow.com/questions/20063803/handling-errors-from-execvp
