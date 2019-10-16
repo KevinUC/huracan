@@ -154,10 +154,12 @@ parseStatus_t readAndParseTasks(Task *tasks, char *command, int *count, bool *bg
 
             strncpy(tasks[taskCnt]._program, buffer[0], strlen(buffer[0]));
             tasks[taskCnt]._args = malloc((argCnt + 1) * sizeof(char *));
+            memset(tasks[taskCnt]._args, 0, sizeof((argCnt + 1) * sizeof(char *)));
 
             for (int j = 0; j < argCnt; j++)
             {
                 tasks[taskCnt]._args[j] = malloc(MAX_CML_LENGTH);
+                memset(tasks[taskCnt]._args[j], 0, MAX_CML_LENGTH);
                 strncpy(tasks[taskCnt]._args[j], buffer[j], strlen(buffer[j]));
             }
 
