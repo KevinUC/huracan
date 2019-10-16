@@ -132,6 +132,7 @@ parseStatus_t readAndParseTasks(Task *tasks, char *command, int *count, bool *bg
             memset(fileName, 0, sizeof(fileName));
 
             i++;
+
             if (!getFileName(input, fileName, &i))
             { /* filename not provided  */
                 return PARSE_ERROR_NO_OUTPUT;
@@ -237,13 +238,27 @@ bool isBgValid(char *input, int i)
 
 bool isOutRedirectValid(char *input, int i)
 {
+
+    bool allSpace = true;
+
     for (; i < strlen(input) - 1; i++)
     {
-        if (input[i] == '|')
+        if (input[i] == '&')
+        {
+            /* background sign error detected first, this is an special case*/
+            return true;
+        }
+        else if (input[i] == '|' && !allSpace)
         {
             return false;
         }
+
+        if (input[i] != ' ')
+        {
+            allSpace = false;
+        }
     }
+
     return true;
 }
 
