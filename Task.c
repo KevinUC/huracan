@@ -214,7 +214,7 @@ bool getFileName(char *input, char *fileName, int *i)
         (*i)++;
     }
 
-    (*i)--; // (*i) is the index of the end of filename
+    (*i)--; /* (*i) is the index of the end of filename */
 
     strncpy(fileName, input + start, (*i) - start + 1);
 

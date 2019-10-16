@@ -17,11 +17,11 @@ skip. Otherwise, wait for all active tasks to finish before jumping back to
 
 # Error handling (high level):
 
-Errors can occur during parsing and executing phase. We added all possible
+Errors can occur during parsing and executing phases. We added all possible
 error types to an enum. We also implemented a _printErrorMessage_ function
-that takes in an error type and print out the corresponding error message by
-using switch statements. The _printErrorMessage_ might only be invoked during
-the parsing and executing phase.
+that takes in an enum error type and print out the corresponding error message
+by using switch statements. The _printErrorMessage_ function might only be
+invoked during the parsing and executing phase.
 
 # Command parsing:
 
@@ -47,7 +47,13 @@ entire filename and open the file before copying the file descriptor to the
 current task struct. Moreover, the “_bg_” flag will be set to true whenever an
 ampersand is detected.
 
-As soon as a parsing error is found, printErrorMessage will be invoked and the shell will jump back to read the next input from user.
+As soon as a parsing error is found, _printErrorMessage_ will be invoked and
+the shell will jump back to read the next input from user. For example, when
+_<_ is encountered, the parser will invoke _getFileName_ to retrieve the file
+name. If the file name has length zero, then the parser will immediately
+return with a parsing error status. When the _main_ function receives
+this status, it will invoke _printErrorMessage_ and then jump to the next
+iteration.
 
 # Background commands (high level):
 
@@ -61,7 +67,7 @@ accomplish that,the _processList_ function calls _waitpid_ with the _WNOHANG_
 flag and the pid number of all tasks within a _Node_. If the return value is
 positive, it then knows that specific task has completed. In this way,
 _processList_ will see if all the tasks within a _Node_ have completed. If so,
-then the corresponding *Node*will be removed from the _List_.
+then the corresponding _Node_ will be removed from the _List_.
 
 _addNode_ will only be evoked during the execution phase. _processList_ will
 be called in two places:1. before a new prompt is printed 2. before the exit
@@ -78,25 +84,49 @@ printing out their return status.
 
 Before forking a child process to execute the task, we first set up pipes and
 modify _stdout_, _stdin_ accordingly. If the current task is not the first
-task
-in the command, then we need to set stdin to the read end of the previous pipe
-so that the current task can read the output from the previous task as its
+task in the command, then we need to set stdin to the read end of the previous
+pipe so that the current task can read the output from the previous task as its
 input. If the current task is not the last task, then we need to set up a new
 pipe and point stdout to the its write end so that the output of current task
 will be seen by the next task as its input. Finally, if the current task is
 the last one, then we must point stdout to its original value. We were able
 to do this by using _dup_ to make a copy of _stdout_ before the loop starts.
 
-We then fork a new process and pass task arguments to _execvp_. In case of
-built-in commands like _pwd_, _cd_ etc, no child process will be created and the shell will handle it by invoking self-defined functions such as _myPwd_.
-We then use _dup2_ to recover stdin from its copy after all tasks have been
-invoked.
+In case of built-in commands like _pwd_, _cd_ etc, no child process will be
+created and the shell will handle it by invoking self-defined functions
+such as _myPwd_.
+
+If the command needs to be handled by an external program, We need to fork a
+new process and use _dup2_ to make _stdout_ and _stdin_ point to the
+corresponding input/output redirect files if they exists. Finally, we pass the
+command arguments and other parameters to _execvp_ and let it execute. If
+_execvp_ fails and _errono_ is set to _EONENT_, we know that the external
+program does not exist, and thus we will print out the error message and exit
+the child process with status 1. If _execvp_ fails for other reasons, then the
+exit status of the child process will be set to _errno_ so that we can trace
+back the error.
+
+After all tasks have been invoked, we need to use _dup2_ to recover _stdin_
+from its copy. Failing to do so will cause _stdin_ point to arbitary values,
+which then will cause the shell to malfunction in following iterations.
 
 If the current command should run in background (_bg_ is true), then the
-executing function will build up a new Node struct that contains all relevant
+executing function will build up a new _Node_ struct that contains all relevant
 information and call _addNode_ to add to the background job list. Otherwise,
 it will call _waitpid_ to wait for all active tasks to finish and then print
-out the exit status message.
+out the exit status message. The exit status of any child process can be
+extracted by applying the _WEXITSTATUS_ macro to the status.
+
+To keep track of the exit status of each individual task, we used two arrays
+to maintain the mapping. We have a _taskToPid_ array that maps task index
+within a command to the pid number of the forked child process that runs the
+task. This array will be filled out by the parent process after _fork_ is
+invoked. We also have a _taskToExitStatus_ array that stores the exit
+status of the child process with respective to the individual task. We
+implemented a function called _findTaskNum_, which returns the task index of
+the given pid number by iterating through the _taskToPid_ array until the pid
+number matches. With the help of _findTaskNum_, we can easily fill out the
+_taskToExitStatus_ array after the completion of the child processes.
 
 # Testing:
 
@@ -107,21 +137,37 @@ expected values.
 
 # Sources that help us to complete the assignment:
 
-_memset()_: https://stackoverflow.com/questions/3389464/
+_memset_:
+https://stackoverflow.com/questions/3389464/
 initializing-a-structure-array-using-memset
 
-_open()_: http://codewiki.wikidot.com/c:system-calls:open
+_open_:
+http://codewiki.wikidot.com/c:system-calls:open
 
-_strcat()_: https://stackoverflow.com/questions/308695/
+_strcat_:
+https://stackoverflow.com/questions/308695/
 how-do-i-concatenate-const-literal-strings-in-c
 
-_execvp()_: https://stackoverflow.com/questions/20063803/
-handling-errors-from-execvp
+_execvp_:
+https://stackoverflow.com/questions/20063803/handling-errors-from-execvp
 
-_waitpid()_: https://linux.die.net/man/2/waitpid
-  
-_waitpid()_:https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/
-com.ibm.zos.v2r1.bpxbd00/rtwaip.htm
+_waitpid_:
+https://linux.die.net/man/2/waitpid
+
+_malloc_:
+https://www.tutorialspoint.com/c_standard_library/c_function_malloc.htm
+
+_dup2_:
+https://stackoverflow.com/questions/11042218/c-restore-stdout-to-terminal
+
+_chdir_ :
+http://man7.org/linux/man-pages/man2/chdir.2.html
+
+_getcwd_:
+https://pubs.opengroup.org/onlinepubs/9699919799/functions/getcwd.html
+
+_UNIX redirect_:
+https://www.guru99.com/linux-redirection.html
 
 Other than that, we also looked at many piazza posts as well as the links
 provided by the assignment prompt for guidance.

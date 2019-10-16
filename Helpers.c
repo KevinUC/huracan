@@ -109,7 +109,7 @@ void executeCommands(Task *tasks, char *command, int taskCnt, bool bg, List *bgL
         taskToExitStatus[taskNum] = WEXITSTATUS(status);
     }
 
-    /* handle the case when command wants to exit*/
+    /* handle the case when command wants to exit */
     if (hasExit)
     {
         /* if active jobs running, print error */
